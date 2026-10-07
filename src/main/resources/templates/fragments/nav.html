@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside class="sidebar" th:fragment="sidebar(active)">
+    <a class="brand" th:href="@{/impact}">
+        <span class="brand-mark">K</span>
+        <span class="brand-copy"><strong>KAI</strong><span>Knowledge impact</span></span>
+    </a>
+    <div class="nav-label">Workspace</div>
+    <nav class="nav" aria-label="Primary navigation">
+        <a th:href="@{/impact}" th:classappend="${active == 'impact'} ? ' active' : ''"><span class="nav-icon">◎</span><span>Impact Analysis</span></a>
+        <a th:href="@{/sources}" th:classappend="${active == 'sources'} ? ' active' : ''"><span class="nav-icon">⌘</span><span>Knowledge Sources</span></a>
+        <a th:href="@{/history}" th:classappend="${active == 'history'} ? ' active' : ''"><span class="nav-icon">↺</span><span>History</span></a>
+        <a th:href="@{/settings}" th:classappend="${active == 'settings'} ? ' active' : ''"><span class="nav-icon">⚙</span><span>Settings</span></a>
+    </nav>
+    <div class="sidebar-foot">Local KAI workspace<br>Agents stay behind the orchestrator.</div>
+</aside>
+</body>
+</html>

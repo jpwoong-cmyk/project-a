@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KAI · History</title>
+    <link rel="stylesheet" th:href="@{/css/kai.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/nav :: sidebar('history')}"></aside>
+    <div class="workspace">
+        <header class="topbar"><div><h1>History</h1><div class="subtitle">Finalized run reports saved with KAI's backups.</div></div></header>
+        <main class="content">
+            <div class="section-head"><div><h2>Change runs</h2><p>Reports are read from <span class="mono" th:text="${backupDir}"></span>.</p></div></div>
+            <section class="panel">
+                <div class="empty-state" th:if="${#lists.isEmpty(runs)}"><strong>No finalized runs yet</strong><span>After you Finalize an impact analysis, its report will appear here.</span></div>
+                <table class="data-table" th:unless="${#lists.isEmpty(runs)}">
+                    <thead><tr><th>Run</th><th>Last updated</th><th>Report</th></tr></thead>
+                    <tbody><tr th:each="r : ${runs}"><td class="mono" th:text="${r.id}"></td><td th:text="${r.modified}"></td><td><a class="button small" th:href="@{|/history/report/${r.id}|}" target="_blank">Open report ↗</a></td></tr></tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+</div>
+<script th:src="@{/js/kai.js}"></script>
+</body></html>

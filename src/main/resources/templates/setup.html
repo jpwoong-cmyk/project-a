@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KAI · Setup</title>
+    <link rel="stylesheet" th:href="@{/css/kai.css}">
+</head>
+<body>
+<div class="setup-page" data-setup>
+    <aside class="setup-side">
+        <div>
+            <div class="eyebrow">Knowledge impact analysis</div>
+            <h1>KAI</h1>
+            <p>Connect the model and the knowledge you already own. KAI handles the impact analysis, proposals, review and controlled write-back behind one local workspace.</p>
+        </div>
+        <p class="muted">Your knowledge stays where it lives. This setup only tells KAI how to reach it.</p>
+    </aside>
+
+    <main class="setup-main">
+        <form class="setup-wrap" th:action="@{/setup}" method="post">
+            <div class="stepper" aria-label="Setup progress">
+                <span class="step-dot"></span><span class="step-dot"></span><span class="step-dot"></span><span class="step-dot"></span>
+            </div>
+
+            <div class="alert error" th:if="${error}" th:text="${error}"></div>
+
+            <section class="setup-step active">
+                <h2>Connect your AI</h2>
+                <p>KAI's Scanner, Editor and Reviewer agents use this OpenAI-compatible endpoint. The values are saved by KAI, so users do not edit a properties file.</p>
+                <div class="panel"><div class="panel-body">
+                    <div class="field-grid">
+                        <div class="field full">
+                            <label for="baseUrl">API endpoint</label>
+                            <input id="baseUrl" name="baseUrl" type="url" required th:value="${ai.baseUrl}" placeholder="https://your-ai-gateway.example.com/v1">
+                            <div class="hint">Use the base URL accepted by your OpenAI-compatible gateway.</div>
+                        </div>
+                        <div class="field">
+                            <label for="apiKey">API key</label>
+                            <input id="apiKey" name="apiKey" type="password" autocomplete="new-password"
+                                   th:placeholder="${hasApiKey} ? 'Saved key · leave blank to keep it' : 'Paste API key'">
+                        </div>
+                        <div class="field">
+                            <label for="modelName">Model</label>
+                            <input id="modelName" name="modelName" type="text" required th:value="${ai.model}" placeholder="gpt-5.6-terra">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="button" type="button" data-ai-test>Test connection</button>
+                        <span class="status" data-ai-status hidden></span>
+                    </div>
+                </div></div>
+                <div class="setup-nav"><span></span><button class="button primary" type="button" data-next>Continue →</button></div>
+            </section>
+
+            <section class="setup-step" data-connector-root>
+                <h2>Choose your knowledge source</h2>
+                <p>KAI talks to every repository through the same adapter contract. This build has the Local / synced folder adapter working end to end; the other connector shells are ready for their provider implementations.</p>
+                <input type="hidden" name="sourceType" value="local">
+                <div class="connector-grid">
+                    <button type="button" class="connector-choice"
+                            th:each="c : ${connectors}"
+                            th:classappend="${c.type == 'local'} ? ' active' : (${!c.installed} ? ' unavailable' : '')"
+                            th:data-type="${c.type}"
+                            th:data-installed="${c.installed}"
+                            th:data-location-label="${c.locationLabel}"
+                            th:data-placeholder="${c.locationPlaceholder}">
+                        <strong th:text="${c.name}"></strong>
+                        <span th:text="${c.description}"></span>
+                    </button>
+                </div>
+                <div class="status warn" data-connector-note hidden></div>
+                <div class="panel" style="margin-top:14px"><div class="panel-body">
+                    <div class="field-grid">
+                        <div class="field">
+                            <label for="sourceName">Display name</label>
+                            <input id="sourceName" name="sourceName" type="text" required value="Team Knowledge" placeholder="Team Knowledge">
+                        </div>
+                        <div class="field">
+                            <label data-location-label for="sourceLocation">Folder path</label>
+                            <input id="sourceLocation" name="sourceLocation" type="text" required placeholder="C:\Knowledge\Runbooks">
+                        </div>
+                        <div class="field" data-provider-field="sharepoint" hidden>
+                            <label for="library">Document library</label>
+                            <input id="library" name="library" type="text" placeholder="Documents">
+                        </div>
+                        <div class="field" data-provider-field="s3" hidden>
+                            <label for="region">AWS region</label>
+                            <input id="region" name="region" type="text" placeholder="ap-southeast-1">
+                        </div>
+                        <div class="field" data-provider-field="s3" hidden>
+                            <label for="prefix">S3 prefix</label>
+                            <input id="prefix" name="prefix" type="text" placeholder="runbooks/">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button class="button" type="button" data-source-test>Test source</button>
+                        <span class="status" data-source-status hidden></span>
+                    </div>
+                </div></div>
+                <div class="setup-nav"><button class="button ghost" type="button" data-back>← Back</button><button class="button primary" type="button" data-next>Continue →</button></div>
+            </section>
+
+            <section class="setup-step">
+                <h2>Safety & processing</h2>
+                <p>Choose where KAI stores exact backups and how many documents it analyses at the same time.</p>
+                <div class="panel"><div class="panel-body">
+                    <div class="field-grid">
+                        <div class="field full">
+                            <label for="backupDir">Backup location</label>
+                            <input id="backupDir" name="backupDir" type="text" required th:value="${backupDir}">
+                            <div class="hint">Keep this outside the folders you analyse. Finalize writes a report and exact original bytes here before any write-back.</div>
+                        </div>
+                        <div class="field">
+                            <label for="parallel">Concurrent documents</label>
+                            <input id="parallel" name="parallel" type="number" min="1" max="32" th:value="${parallel}">
+                            <div class="hint">4 is a good default. Lower it if your model gateway rate-limits requests.</div>
+                        </div>
+                    </div>
+                </div></div>
+                <div class="setup-nav"><button class="button ghost" type="button" data-back>← Back</button><button class="button primary" type="button" data-next>Review →</button></div>
+            </section>
+
+            <section class="setup-step">
+                <h2>Ready to open KAI</h2>
+                <p>KAI will save these settings into your private application-data folder. You can change everything later from Settings and Knowledge Sources.</p>
+                <div class="panel"><div class="panel-body">
+                    <strong>What happens next</strong>
+                    <div class="setup-summary">
+                        <div><span>Workspace</span><span>Impact Analysis</span></div>
+                        <div><span>Agents</span><span>Scanner → Editor → Reviewer</span></div>
+                        <div><span>Write control</span><span>Human approval required</span></div>
+                        <div><span>Rollback</span><span>Enabled before write-back</span></div>
+                    </div>
+                </div></div>
+                <div class="setup-nav"><button class="button ghost" type="button" data-back>← Back</button><button class="button primary" type="submit">Finish setup</button></div>
+            </section>
+        </form>
+    </main>
+</div>
+<script th:src="@{/js/kai.js}"></script>
+</body>
+</html>

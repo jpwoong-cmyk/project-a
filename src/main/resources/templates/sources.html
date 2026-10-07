@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KAI · Knowledge Sources</title>
+    <link rel="stylesheet" th:href="@{/css/kai.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/nav :: sidebar('sources')}"></aside>
+    <div class="workspace">
+        <header class="topbar"><div><h1>Knowledge Sources</h1><div class="subtitle">Connect KAI to the knowledge your users already own.</div></div><button class="button primary" type="button" data-open-modal="source-modal">+ Add source</button></header>
+        <main class="content">
+            <div class="alert success" th:if="${success}" th:text="${success}"></div>
+            <div class="alert warning" th:if="${warning}" th:text="${warning}"></div>
+            <div class="alert error" th:if="${error}" th:text="${error}"></div>
+
+            <div class="section-head"><div><h2>Connected knowledge</h2><p>KAI's agents receive normalized document text through the adapter layer. The source system remains authoritative.</p></div></div>
+            <section class="panel">
+                <div class="empty-state" th:if="${#lists.isEmpty(rows)}"><strong>No sources yet</strong><span>Add a local or enterprise knowledge source to begin impact analysis.</span></div>
+                <table class="data-table" th:unless="${#lists.isEmpty(rows)}">
+                    <thead><tr><th>Source</th><th>Connector</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                    <tr th:each="r : ${rows}">
+                        <td><div class="source-name" th:text="${r.source.name}"></div><div class="source-location mono" th:text="${r.source.location}"></div></td>
+                        <td><span th:text="${r.connectorName}"></span><div class="muted" style="font-size:11px" th:if="${!r.installed}">Connector draft only</div></td>
+                        <td><span class="badge" th:classappend="${r.ok} ? ' good' : (${r.source.enabled} ? ' bad' : ' warn')"><span class="dot"></span><span th:text="${r.status}"></span></span></td>
+                        <td><div class="actions">
+                            <form th:action="@{|/sources/${r.source.id}/toggle|}" method="post"><button class="button small" type="submit" th:text="${r.source.enabled} ? 'Disable' : 'Enable'"></button></form>
+                            <form th:action="@{|/sources/${r.source.id}/delete|}" method="post" onsubmit="return confirm('Remove this source from KAI? The original knowledge is not deleted.');"><button class="button danger small" type="submit">Remove</button></form>
+                        </div></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head"><div><h3>Adapter model</h3><p>Provider details stop at the adapter boundary. Scanner, Editor and Reviewer remain source-agnostic.</p></div></div>
+                <div class="panel-body mono" style="line-height:1.7;color:#4c5a69">Knowledge source → KnowledgeSourceAdapter → Orchestrator → Scanner Agent → Editor Agent → Reviewer Agent → Human review → controlled write-back</div>
+            </section>
+        </main>
+    </div>
+</div>
+
+<div class="modal-backdrop" id="source-modal">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-source-title">
+        <div class="modal-head"><h3 id="add-source-title">Add knowledge source</h3><button class="close" type="button" data-close-modal aria-label="Close">×</button></div>
+        <form class="modal-body" th:action="@{/sources/add}" method="post" data-connector-root>
+            <input type="hidden" name="type" value="local">
+            <div class="connector-grid">
+                <button type="button" class="connector-choice" th:each="c : ${connectors}"
+                        th:classappend="${c.type == 'local'} ? ' active' : (${!c.installed} ? ' unavailable' : '')"
+                        th:data-type="${c.type}" th:data-installed="${c.installed}"
+                        th:data-location-label="${c.locationLabel}" th:data-placeholder="${c.locationPlaceholder}">
+                    <strong th:text="${c.name}"></strong><span th:text="${c.description}"></span>
+                </button>
+            </div>
+            <div class="status warn" data-connector-note hidden></div>
+            <div class="field-grid" style="margin-top:16px">
+                <div class="field"><label>Name</label><input name="name" type="text" required placeholder="Corporate Knowledge"></div>
+                <div class="field"><label data-location-label>Folder path</label><input name="location" type="text" required placeholder="C:\Knowledge\Runbooks"></div>
+                <div class="field" data-provider-field="sharepoint" hidden><label>Document library</label><input name="library" type="text" placeholder="Documents"></div>
+                <div class="field" data-provider-field="s3" hidden><label>AWS region</label><input name="region" type="text" placeholder="ap-southeast-1"></div>
+                <div class="field" data-provider-field="s3" hidden><label>Prefix</label><input name="prefix" type="text" placeholder="runbooks/"></div>
+                <div class="field" data-provider-field="onedrive,googledrive" hidden><label>Drive / workspace</label><input name="drive" type="text" placeholder="Optional drive name or ID"></div>
+            </div>
+            <div class="form-actions">
+                <button class="button" type="button" data-source-test>Test source</button>
+                <button class="button primary" type="submit">Save source</button>
+                <span class="status" data-source-status hidden></span>
+            </div>
+        </form>
+    </div>
+</div>
+<script th:src="@{/js/kai.js}"></script>
+</body></html>

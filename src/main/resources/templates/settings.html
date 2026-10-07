@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KAI · Settings</title>
+    <link rel="stylesheet" th:href="@{/css/kai.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/nav :: sidebar('settings')}"></aside>
+    <div class="workspace">
+        <header class="topbar"><div><h1>Settings</h1><div class="subtitle">Configure KAI from the UI. No user-editable properties file required.</div></div></header>
+        <main class="content narrow">
+            <div class="alert success" th:if="${success}" th:text="${success}"></div>
+            <div class="alert warning" th:if="${warning}" th:text="${warning}"></div>
+            <div class="alert error" th:if="${error}" th:text="${error}"></div>
+
+            <section class="panel">
+                <div class="panel-head"><div><h3>AI connection</h3><p>Used by Scanner, Editor and Reviewer. Settings take effect on the next agent call.</p></div><span class="badge" th:classappend="${hasApiKey} ? ' good' : ' warn'"><span class="dot"></span><span th:text="${hasApiKey} ? 'Key available' : 'Key missing'"></span></span></div>
+                <form class="panel-body" th:action="@{/settings/ai}" method="post">
+                    <div class="field-grid">
+                        <div class="field full"><label>API endpoint</label><input name="baseUrl" type="url" required th:value="${ai.baseUrl}" placeholder="https://your-ai-gateway.example.com/v1"></div>
+                        <div class="field"><label>API key</label><input name="apiKey" type="password" autocomplete="new-password" th:placeholder="${hasApiKey} ? 'Saved key · leave blank to keep it' : 'Paste API key'"><div class="hint">For this prototype the key is stored in KAI's private user settings folder, not in the project directory.</div></div>
+                        <div class="field"><label>Model</label><input name="model" type="text" required th:value="${ai.model}" placeholder="gpt-5.6-terra"></div>
+                    </div>
+                    <div class="form-actions"><button class="button" type="button" data-ai-test>Test connection</button><button class="button primary" type="submit">Save AI settings</button><span class="status" data-ai-status hidden></span></div>
+                </form>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head"><div><h3>Processing & safety</h3><p>Controls KAI's local processing and backup behaviour.</p></div></div>
+                <form class="panel-body" th:action="@{/settings/general}" method="post">
+                    <div class="field-grid">
+                        <div class="field full"><label>Backup location</label><input name="backupDir" type="text" required th:value="${backupDir}"><div class="hint">KAI stores exact originals and the final HTML report here before write-back.</div></div>
+                        <div class="field"><label>Concurrent documents</label><input name="parallel" type="number" min="1" max="32" th:value="${parallel}"></div>
+                        <div class="field"><label>Local port</label><input name="port" type="number" min="1" max="65535" th:value="${port}"><div class="hint">A port change takes effect after KAI restarts.</div></div>
+                    </div>
+                    <div class="form-actions"><button class="button primary" type="submit">Save processing settings</button></div>
+                </form>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head"><div><h3>Private application data</h3><p>KAI manages this file itself. It is shown only so admins know where settings live.</p></div></div>
+                <div class="panel-body"><code class="mono" th:text="${configFile}"></code></div>
+            </section>
+        </main>
+    </div>
+</div>
+<script th:src="@{/js/kai.js}"></script>
+</body></html>

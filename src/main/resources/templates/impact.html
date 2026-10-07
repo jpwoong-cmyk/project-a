@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>KAI · Impact Analysis</title>
+    <link rel="stylesheet" th:href="@{/css/kai.css}">
+</head>
+<body>
+<div class="shell">
+    <aside th:replace="~{fragments/nav :: sidebar('impact')}"></aside>
+    <div class="workspace">
+        <header class="topbar">
+            <div><h1>Impact Analysis</h1><div class="subtitle">Describe what changed. KAI finds the knowledge that needs attention.</div></div>
+            <div class="topbar-actions">
+                <span class="badge" th:classappend="${aiReady} ? ' good' : ' bad'"><span class="dot"></span><span th:text="${aiReady} ? 'AI ready' : 'AI not configured'"></span></span>
+                <span class="badge" th:classappend="${sourceReady} ? ' good' : ' bad'"><span class="dot"></span><span th:text="|${targets.size()} source${targets.size() == 1 ? '' : 's'}|"></span></span>
+            </div>
+        </header>
+
+        <main class="content">
+            <div class="alert error" th:if="${!aiReady}">AI is not configured. <a th:href="@{/settings}">Open Settings</a> to add the endpoint, API key and model.</div>
+            <div class="alert error" th:if="${!sourceReady}">No usable knowledge source is connected. <a th:href="@{/sources}">Open Knowledge Sources</a> to connect one.</div>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div><h3>What changed?</h3><p>Paste a release note, policy change, product update or plain-language instruction.</p></div>
+                    <form th:action="@{/impact/clear}" method="post" th:if="${!#lists.isEmpty(messages) and log == null}"><button class="button ghost small" type="submit">Clear session</button></form>
+                </div>
+                <form class="impact-compose" id="impact-form" th:action="@{/impact/scan}" method="post">
+                    <textarea id="change-request" name="message" required th:disabled="${log != null or !aiReady or !sourceReady}"
+                              placeholder="Example: We are moving application authentication from username/password to corporate SSO."></textarea>
+                    <div class="example-row">
+                        <button class="example" type="button" data-example="We now require Java 21 instead of Java 17">Java 21 requirement</button>
+                        <button class="example" type="button" data-example="Rename the product from Acme Portal to Kai Hub">Product rename</button>
+                        <button class="example" type="button" data-example="Change the application port from 8080 to 9090">Port change</button>
+                    </div>
+                    <div class="form-actions">
+                        <button class="button primary" type="submit" th:disabled="${log != null or !aiReady or !sourceReady}" th:text="${log != null} ? 'Analysis running…' : 'Analyse impact'"></button>
+                        <span class="muted" style="font-size:12px">Nothing is written until you review and Finalize.</span>
+                    </div>
+                    <div class="source-strip" th:if="${!#lists.isEmpty(targets)}">
+                        <span class="source-pill" th:each="t : ${targets}" th:text="${t.displayName()} + ' · ' + ${t.type()}"></span>
+                    </div>
+                </form>
+            </section>
+
+            <div class="chat-stack">
+                <section class="message" th:each="m, mi : ${messages}" th:classappend="${m.sender}" th:id="${m.report != null} ? 'report-' + ${mi.index} : null">
+                    <div class="message-copy" th:if="${m.report == null}">
+                        <span th:text="${m.text}"></span>
+                        <a class="button small" style="margin-left:10px" th:if="${m.link}" th:href="${m.link}" target="_blank">Open report ↗</a>
+                    </div>
+
+                    <form th:if="${m.report != null}" th:action="@{/impact/save}" method="post">
+                        <input type="hidden" name="report" th:value="${mi.index}">
+                        <div class="result-summary">
+                            <div><strong th:text="${m.text}"></strong><div class="muted" style="font-size:11px;margin-top:3px" th:text="'Change request: ' + ${m.report.instruction}"></div></div>
+                            <span class="badge" th:classappend="${m.report.affectedCount() > 0} ? ' warn' : ' good'" th:text="${m.report.affectedCount()} + ' affected'"></span>
+                        </div>
+
+                        <th:block th:each="g : ${m.report.groups()}">
+                            <div class="result-source" th:text="${g.target.displayName()} + ' · ' + ${g.target.type()} + ' · ' + ${g.affectedCount()} + ' affected of ' + ${g.findings.size()}"></div>
+
+                            <div class="finding" th:each="f : ${g.attention()}" th:with="i=${m.report.findings.indexOf(f)}, p=${f.proposal}">
+                                <div class="finding-head">
+                                    <div class="finding-file" th:text="${f.file}"></div>
+                                    <div>
+                                        <span class="badge bad" th:if="${f.status.name() == 'ERROR'}">Could not check</span>
+                                        <span class="badge warn" th:if="${f.manual()}">Update by hand</span>
+                                        <span class="badge warn" th:if="${f.affected() and !f.manual() and p != null and !p.ready()}">Could not apply</span>
+                                        <span class="badge good" th:if="${f.affected() and !f.manual() and p != null and p.ready()}">Proposed change</span>
+                                    </div>
+                                    <div class="finding-reason" th:text="${f.reason}"></div>
+                                </div>
+
+                                <div class="proposal" th:if="${p != null}">
+                                    <div class="status bad" th:if="${!p.ready()}" th:text="${p.error}"></div>
+                                    <th:block th:if="${p.ready()}">
+                                        <div class="proposal-top">
+                                            <label><input type="checkbox" th:name="'include' + ${i}" th:checked="${p.include}"> <strong>Include this file</strong></label>
+                                            <span class="badge" th:if="${p.edited}">Edited by you</span>
+                                        </div>
+                                        <div class="review-note" th:classappend="${p.reviewOk == null} ? '' : (${p.reviewOk} ? ' ok' : ' warn')">
+                                            <strong th:text="${p.reviewOk == null} ? 'Reviewer unavailable. ' : (${p.reviewOk} ? 'Reviewer: looks right. ' : 'Reviewer: check this. ')"></strong>
+                                            <span th:text="${p.review}"></span>
+                                        </div>
+                                        <div class="diff" th:if="${!#lists.isEmpty(p.diff())}">
+                                            <div class="diff-line" th:each="line : ${p.diff()}" th:classappend="${line.kind}" th:text="${line.text}"></div>
+                                        </div>
+                                        <div class="muted" th:if="${#lists.isEmpty(p.diff())}" style="font-size:12px">No differences from the original.</div>
+                                        <details>
+                                            <summary>Edit proposed text</summary>
+                                            <textarea th:name="'text' + ${i}" th:text="${p.proposed}" spellcheck="false"></textarea>
+                                        </details>
+                                    </th:block>
+                                </div>
+                            </div>
+
+                            <details class="finding" th:if="${!#lists.isEmpty(g.unchanged())}" style="padding:12px 14px">
+                                <summary class="muted" th:text="'No change needed (' + ${g.unchanged().size()} + ')'" style="cursor:pointer;font-size:12px;font-weight:700"></summary>
+                                <table class="data-table" style="margin-top:8px">
+                                    <tbody><tr th:each="f : ${g.unchanged()}"><td class="mono" th:text="${f.file}"></td><td class="muted" th:text="${f.reason}"></td></tr></tbody>
+                                </table>
+                            </details>
+
+                            <div class="empty-state" th:if="${#lists.isEmpty(g.findings)}"><strong>No supported documents found</strong><span>This source is connected, but it did not return files KAI can analyse.</span></div>
+                        </th:block>
+
+                        <div class="result-actions" th:if="${m.report.readyCount() > 0 and !m.applied}">
+                            <button class="button" type="submit">Save review</button>
+                            <button class="button primary" type="submit" th:formaction="@{/impact/finalize}" data-finalize>Finalize selected</button>
+                            <span class="muted" style="font-size:11px">Finalize performs stale check → report → backup → write → rollback on failure.</span>
+                        </div>
+                        <div class="result-actions" th:if="${m.applied}"><span class="badge good">Finalized</span><span class="muted" style="font-size:12px">Approved changes were written to the source.</span></div>
+                    </form>
+                </section>
+
+                <section class="message" th:if="${log != null}">
+                    <div class="result-summary"><strong>Agents are analysing your knowledge</strong><span class="badge">Live</span></div>
+                    <div class="log" id="agent-log" th:data-url="@{/impact/progress}"><div th:each="line : ${log}" th:text="${line}"></div></div>
+                </section>
+            </div>
+        </main>
+    </div>
+</div>
+<script th:src="@{/js/kai.js}"></script>
+</body>
+</html>
